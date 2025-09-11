@@ -17,6 +17,7 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     public bool isMatched;
 
     private System.Action<CardView> onClicked;
+    private bool isAnimating;
 
     public void Setup(int id, char cardLetter, System.Action<CardView> clickCallback)
     {
@@ -24,38 +25,52 @@ public class CardView : MonoBehaviour, IPointerClickHandler
         letter = cardLetter;
         onClicked = clickCallback;
 
-        textFace.text = cardLetter.ToString();
+        if (textFace != null)
+            textFace.text = cardLetter.ToString();
+
+        SetFaceInstant(false);
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (isMatched) return;
+        if (isMatched || isAnimating) return;
         onClicked?.Invoke(this);
+    }
+
+    public void SetFaceInstant(bool faceUp)
+    {
+        if (textFace != null) textFace.gameObject.SetActive(faceUp);
+        if (imageBack != null) imageBack.gameObject.SetActive(!faceUp);
+        isRevealed = faceUp;
     }
 
     public void Flip()
     {
-        if (isMatched) return;
+        if (isMatched || isAnimating ) return;
         StartCoroutine(FlipAnimation());
     }
 
     public void SetMatched()
     {
         isMatched = true;
-        GetComponent<Button>().interactable = false; 
+
+        //disabling interaction on match : fix
+
+        var btn = GetComponent<Button>();
+        if (btn != null) btn.interactable = false;
     }
 
     private void ShowBack()
     {
-        textFace.gameObject.SetActive(false);
-        imageBack.gameObject.SetActive(true);
+        if (textFace != null) textFace.gameObject.SetActive(false);
+        if (imageBack != null) imageBack.gameObject.SetActive(true);
         isRevealed = false;
     }
 
     private void ShowFace()
     {
-        textFace.gameObject.SetActive(true);
-        textFace.gameObject.SetActive(false);
+        if (textFace != null) textFace.gameObject.SetActive(true);
+        if (imageBack != null) imageBack.gameObject.SetActive(false); // was textface, made cards hide face twice
         isRevealed = true;
     }
 
@@ -63,7 +78,7 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     {
         //Squash it to center
 
-        for (float t = 0; t < 1; t += Time.deltaTime * 8f)
+        for (float t = 0; t < 1f; t += Time.deltaTime * 8f)
         {
             float scale = 1f - t;
             transform.localScale = new Vector3(scale, 1f, 1f);
@@ -84,5 +99,7 @@ public class CardView : MonoBehaviour, IPointerClickHandler
         }
 
         transform.localScale = Vector3.one;
+        isAnimating = false;
     }
+
 }
