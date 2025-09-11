@@ -68,7 +68,7 @@ public class GameController : MonoBehaviour
         if (total % 2 != 0) total--; //Makes even
 
         deckOrder.Clear();
-        for (int i = 0; i < total; i++)
+        for (int i = 0; i < total / 2; i++) // fix - pairs, not total
         {
             deckOrder.Add(i);
             deckOrder.Add(i);
@@ -86,6 +86,7 @@ public class GameController : MonoBehaviour
 
         seed = Random.Range(0, 1000000); //This for the save system
         BuildBoard();
+        StartCoroutine(PreviewThenHideAll(5f)); // fix - forgot to add this earlier to preview cards
         Save();
     }
 
@@ -110,7 +111,7 @@ public class GameController : MonoBehaviour
             CardView card = cardObj.GetComponent<CardView>();
 
             int cardID = deckOrder[i];
-            char letter = (char)('A' + cardID ^ 26);
+            char letter = (char)('A' + (cardID % 26)); // fix - modulo
 
             card.Setup(cardID, letter, OnCardClicked);
 
@@ -118,7 +119,7 @@ public class GameController : MonoBehaviour
 
             if (matched.Contains(cardID))
             {
-                card.isRevealed = true;
+                card.SetFaceInstant(true); // fix - shows face immeadiatley
                 card.SetMatched();
             }
 
@@ -126,22 +127,20 @@ public class GameController : MonoBehaviour
         }
 
     }
-
+    private bool previewActive = false;
     void OnCardClicked(CardView card)
+
     {
-        if (card.isMatched) return;
+        if (card.isMatched || previewActive) return;
 
         PlaySound(flipClip);
+
+        bool willReveal = !card.isRevealed;
         card.Flip();
 
-        if(card.isRevealed)
-        {
-            flippedCards.Add(card);
-        }
-        else
-        {
-            flippedCards.Remove(card);
-        }
+        if (willReveal) flippedCards.Add(card);
+
+        else flippedCards.Remove(card);
 
         //Checking for matches when multiple cards are present
 
@@ -151,6 +150,36 @@ public class GameController : MonoBehaviour
         }
     }
 
+    private IEnumerator PreviewThenHideAll(float seconds = 5f)
+    {
+        previewActive = true;
+
+        //To reveal all of it
+
+        for (int i = 0; i < cards.Count; i++)
+        {
+            if (!cards[i].isMatched) cards[i].SetFaceInstant(true);
+        }
+
+        UpdateUI();
+
+        yield return new WaitForSeconds(seconds);
+
+        //Flip down animation
+
+        for (int i = 0; i < cards.Count; i++)
+        {
+            var c = cards[i];
+            if (!c.isMatched && c.isRevealed)
+            {
+                flippedCards.Remove(c); // keeps flipped cards in sync
+                c.Flip();
+            }
+        }
+
+        previewActive = false;
+    }
+
     void CheckMatches()
     {
 
@@ -158,10 +187,10 @@ public class GameController : MonoBehaviour
 
         for(int i =0; i < flippedCards.Count - 1; i++)
         {
-            for(int j = i; j < flippedCards.Count; j++)
+            for(int j = i + 1; j < flippedCards.Count; j++) // fix j=i+1
             {
-                CardView card1 = flippedCards[i];
-                CardView card2 = flippedCards[j];
+                var card1 = flippedCards[i];
+                var card2 = flippedCards[j];
 
                 if (card1.cardID == card2.cardID)
                 {
@@ -176,7 +205,8 @@ public class GameController : MonoBehaviour
                     flippedCards.Remove(card2);
 
                     combo++;
-                    score += 100 + (combo * 25);
+                    int mult = 1 + (combo / 3);
+                    score += 100 * mult;
 
                     PlaySound(matchClip);
                     UpdateUI();
@@ -191,8 +221,11 @@ public class GameController : MonoBehaviour
 
         if (flippedCards.Count > 2)
         {
-            CardView oldestCard = flippedCards[0];
-            oldestCard.Flip(); //Hides the card and removes it from the flipped list
+            var oldestCard = flippedCards[0];
+            flippedCards.RemoveAt(0);
+
+            if (oldestCard.isRevealed)
+                oldestCard.Flip();
 
             combo = 0;
             score = Mathf.Max(0, score - 10);
