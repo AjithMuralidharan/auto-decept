@@ -16,6 +16,7 @@ public class GameController : MonoBehaviour
     public TextMeshProUGUI comboText;
     public Button newGameButton;
     public Button layoutButton;
+    public Button saveButton;
 
     [Header("Audio")]
     public AudioSource audioSource;
@@ -27,37 +28,43 @@ public class GameController : MonoBehaviour
 
     private List<CardView> cards = new List<CardView>();
     private List<CardView> flippedCards = new List<CardView>();
+    private HashSet<int> matched = new HashSet<int>();
+    private List<int> deckOrder = new List<int>();
 
     private int score = 0;
     private int combo = 0;
     private int seed;
-    private List<int> deckOrder = new List<int>();
-    private HashSet<int> matched = new HashSet<int>();
+    private bool previewActive = false;
 
     void Start()
     {
-        newGameButton?.onClick.AddListener(NewGame);
-        layoutButton?.onClick.AddListener(ChangeLayout);
+        if (newGameButton != null) newGameButton.onClick.AddListener(() => NewGame(false));
+        if (layoutButton != null) layoutButton.onClick.AddListener(ChangeLayout);
+        if (saveButton != null) saveButton.onClick.AddListener(Save);
 
         //Try to load, if not start new
 
         if (GameBoot.RequestedMode == GameBoot.Mode.LoadGame && TryLoad())
         {
             BuildBoard();
+            UpdateUI();
         }
         else
         {
-            NewGame();
+            NewGame(false);
         }
 
-        UpdateUI();
     }
 
-    void NewGame()
+    void NewGame(bool preserveScore = false)
     {
         ClearBoard();
 
-        score = 0;
+
+        if (!preserveScore)
+        {
+            score = 0;
+        }
         combo = 0;
         matched.Clear();
 
@@ -65,10 +72,11 @@ public class GameController : MonoBehaviour
 
         var layout = boardConfig.Current;
         int total = layout.rows * layout.cols;
-        if (total % 2 != 0) total--; //Makes even
+        if ((total & 1) != 0) total--; //Makes even
 
         deckOrder.Clear();
-        for (int i = 0; i < total / 2; i++) // fix - pairs, not total
+        int pairs = total / 2;
+        for (int i = 0; i < pairs; i++) // fix - pairs, not total
         {
             deckOrder.Add(i);
             deckOrder.Add(i);
@@ -79,20 +87,21 @@ public class GameController : MonoBehaviour
         for(int i = 0; i < deckOrder.Count; i++)
         {
             int j = Random.Range(i, deckOrder.Count);
-            int temp = deckOrder[i];
+            int tmp = deckOrder[i];
             deckOrder[i] = deckOrder[j];
-            deckOrder[j] = temp;
+            deckOrder[j] = tmp;
         }
 
         seed = Random.Range(0, 1000000); //This for the save system
+
         BuildBoard();
+        UpdateUI();
         StartCoroutine(PreviewThenHideAll(5f)); // fix - forgot to add this earlier to preview cards
         Save();
     }
 
     void ChangeLayout()
     {
-
         boardConfig.Next();
         NewGame();
     }
@@ -107,47 +116,123 @@ public class GameController : MonoBehaviour
 
         for (int i = 0; i < deckOrder.Count; i++)
         {
+            int cardID = deckOrder[i];
+
+            if (matched.Contains(cardID))
+                continue;
+
             GameObject cardObj = Instantiate(cardPrefab, responsiveGrid.transform);
             CardView card = cardObj.GetComponent<CardView>();
 
-            int cardID = deckOrder[i];
-            char letter = (char)('A' + (cardID % 26)); // fix - modulo
-
+            char letter = (char)('A' + (cardID % 26));
             card.Setup(cardID, letter, OnCardClicked);
 
-            //Restore state if it matches
-
-            if (matched.Contains(cardID))
-            {
-                card.SetFaceInstant(true); // fix - shows face immeadiatley
-                card.SetMatched();
-            }
+            card.SetFaceInstant(false);
 
             cards.Add(card);
         }
 
     }
-    private bool previewActive = false;
+
+    void ResolveTwoOpen(CardView a, CardView b)
+    {
+        if (a == null || b == null) 
+        { 
+            flippedCards.Clear(); 
+            return; 
+        }
+
+        if (a == b)
+        {
+            return; //Same instance when clicked twice, does nothing
+        }
+
+        if (a.cardID == b.cardID && a != b)
+        {
+            a.SetMatched();
+            b.SetMatched();
+            matched.Add(a.cardID); //For Match
+
+            flippedCards.Remove(a);
+            flippedCards.Remove(b); 
+
+            combo++;
+            int mult = 1 + (combo / 3);
+            score += 100 * mult;
+
+            PlaySound(matchClip);
+            UpdateUI();
+            Save();
+
+            StartCoroutine(DestroyMatchedAfterDelay(a, b, 2f));
+        }
+
+        else
+        {
+            flippedCards.Remove(a);
+            flippedCards.Remove(b);
+
+          
+            combo = 0; 
+            score = Mathf.Max(0, score - 10); //added penalty
+
+            PlaySound(mismatchClip);
+            UpdateUI();
+            Save();
+
+            StartCoroutine(FlipBackAfterDelay(a, b, 2f));
+        }
+    }
+
+    private System.Collections.IEnumerator DestroyMatchedAfterDelay(CardView a, CardView b, float delayseconds)
+    {
+        yield return new WaitForSeconds(delayseconds);
+
+        if (a != null) Destroy(a.gameObject);
+        if (b != null) Destroy(b.gameObject);
+
+        CheckWin();
+
+        yield break;
+    }
+
+    private System.Collections.IEnumerator FlipBackAfterDelay(CardView a, CardView b, float delayseconds)
+    {
+        yield return new WaitForSeconds(delayseconds);
+
+        if (a != null && a.isRevealed && !a.isMatched) a.Flip();
+        if (b != null && b.isRevealed && !b.isMatched) b.Flip();
+
+        yield break;
+    }
+
+    
     void OnCardClicked(CardView card)
 
     {
-        if (card.isMatched || previewActive) return;
+        if (previewActive || card.isMatched) return;
 
         PlaySound(flipClip);
 
         bool willReveal = !card.isRevealed;
         card.Flip();
 
-        if (willReveal) flippedCards.Add(card);
-
-        else flippedCards.Remove(card);
-
-        //Checking for matches when multiple cards are present
-
-        if(flippedCards.Count >= 2)
+        if (willReveal)
         {
-            CheckMatches();
+
+            if (!flippedCards.Contains(card))
+                flippedCards.Add(card);
+
+            if (flippedCards.Count == 2)
+            {
+                ResolveTwoOpen(flippedCards[0], flippedCards[1]);
+            }
         }
+        else
+        {
+            flippedCards.Remove(card);
+        }
+        
     }
 
     private IEnumerator PreviewThenHideAll(float seconds = 5f)
@@ -158,7 +243,8 @@ public class GameController : MonoBehaviour
 
         for (int i = 0; i < cards.Count; i++)
         {
-            if (!cards[i].isMatched) cards[i].SetFaceInstant(true);
+            if (!cards[i].isMatched) 
+                cards[i].SetFaceInstant(true);
         }
 
         UpdateUI();
@@ -180,61 +266,7 @@ public class GameController : MonoBehaviour
         previewActive = false;
     }
 
-    void CheckMatches()
-    {
-
-        //Finding any matching pair
-
-        for(int i =0; i < flippedCards.Count - 1; i++)
-        {
-            for(int j = i + 1; j < flippedCards.Count; j++) // fix j=i+1
-            {
-                var card1 = flippedCards[i];
-                var card2 = flippedCards[j];
-
-                if (card1.cardID == card2.cardID)
-                {
-
-                    //When Match is found
-
-                    card1.SetMatched();
-                    card2.SetMatched();
-                    matched.Add(card1.cardID);
-
-                    flippedCards.Remove(card1);
-                    flippedCards.Remove(card2);
-
-                    combo++;
-                    int mult = 1 + (combo / 3);
-                    score += 100 * mult;
-
-                    PlaySound(matchClip);
-                    UpdateUI();
-                    Save();
-                    CheckWin();
-                    return;
-                }
-            }
-        }
-
-        // When no matches - handling third card 
-
-        if (flippedCards.Count > 2)
-        {
-            var oldestCard = flippedCards[0];
-            flippedCards.RemoveAt(0);
-
-            if (oldestCard.isRevealed)
-                oldestCard.Flip();
-
-            combo = 0;
-            score = Mathf.Max(0, score - 10);
-
-            PlaySound(mismatchClip);
-            UpdateUI();
-            Save();
-        }
-    }
+    
 
     void CheckWin()
     {
@@ -244,15 +276,32 @@ public class GameController : MonoBehaviour
         if (matched.Count >= totalPairs)
         {
             PlaySound(gameOverClip);
+
+            StartCoroutine(AdvanceToNextLayoutAfter(1.5f));
+
             Debug.Log($"You Win! Final Score : {score}");
         }
+    }
+
+    private void AdvanceToNextLayout()
+    {
+        boardConfig.Next();
+        NewGame(preserveScore: true);
+    }
+
+    private System.Collections.IEnumerator AdvanceToNextLayoutAfter(float delayseconds)
+    {
+        yield return new WaitForSeconds(delayseconds);
+        boardConfig.Next();
+        NewGame(preserveScore: true); //fix: keep scores across layouts
+
     }
 
     void UpdateUI()
     {
 
-        scoreText.text = $"Score : {score}";
-        comboText.text = $"Combo : {combo}";
+        if (scoreText != null) scoreText.text = "Score: " + score;
+        if (comboText != null) comboText.text = "Combo: " + combo + " (x" + (1 + (combo / 3)) + ")";
     }
 
     void PlaySound(AudioClip clip)
