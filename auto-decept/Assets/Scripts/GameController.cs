@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using TMPro;
 
 public class GameController : MonoBehaviour
@@ -42,19 +43,25 @@ public class GameController : MonoBehaviour
         if (layoutButton != null) layoutButton.onClick.AddListener(ChangeLayout);
         if (saveButton != null) saveButton.onClick.AddListener(Save);
 
-        //Try to load, if not start new
+        Debug.Log("[GC] persistentDataPath = " + Application.persistentDataPath);
+        Debug.Log("[GC] requested mode = " + GameBoot.RequestedMode);
 
-        if (GameBoot.RequestedMode == GameBoot.Mode.LoadGame && TryLoad())
+        if (GameBoot.RequestedMode == GameBoot.Mode.LoadGame)
         {
-            BuildBoard();
-            UpdateUI();
+            if (TryLoad())
+            {
+                BuildBoard();
+                UpdateUI();
+                return;
+            }
+            else
+            {
+                Debug.LogWarning("[GC] Load requested but no save found. Starting new game.");
+            }
         }
-        else
-        {
-            NewGame(false);
-        }
-
+        NewGame(false);
     }
+
 
     void NewGame(bool preserveScore = false)
     {
@@ -309,7 +316,7 @@ public class GameController : MonoBehaviour
         if (audioSource && clip) audioSource.PlayOneShot(clip);
     }
 
-    void Save()
+    public void Save()
     {
         SaveData data = new SaveData
         {
@@ -322,12 +329,15 @@ public class GameController : MonoBehaviour
         };
 
         SaveSystem.Save(data);
-    }
 
+    }
     bool TryLoad()
     {
+
         SaveData data;
-        if (!SaveSystem.TryLoad(out data)) return false;
+        if (!SaveSystem.TryLoad(out data))
+        return false;
+            
 
         boardConfig.SetIndex(data.layoutIndex);
         score = data.score;
@@ -337,6 +347,16 @@ public class GameController : MonoBehaviour
         matched = new HashSet<int>(data.matchedIds);
 
         return true;
+
+    }
+
+    public void OnReturnToMenuClicked()
+    {
+
+        Save(); //Saves current game
+        GameBoot.RequestedMode = GameBoot.Mode.AutoLoad;
+        SceneManager.LoadScene("Title");
+
     }
 
     void ClearBoard()

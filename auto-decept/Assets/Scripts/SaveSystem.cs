@@ -4,7 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-//JSON persistance. No warnings; just return failures as false
+//JSON persistance. No warnings, just return failures as false
 [Serializable]
 public class SaveData
 {
@@ -18,32 +18,50 @@ public class SaveData
 
 public static class SaveSystem
 {
-    private static string FilePath
-    {
-        get { return Path.Combine(Application.persistentDataPath, "save.json"); }
+    private static readonly string FileName = "save.json";
+    public static string FilePath => Path.Combine(Application.persistentDataPath, FileName);
 
-    }
-
-    public static void Save(SaveData data)
+    public static bool Save(SaveData data)
     {
-        string json = JsonUtility.ToJson(data, false);
-        File.WriteAllText(FilePath, json);
+        try
+        {
+            string json = JsonUtility.ToJson(data, false);
+            File.WriteAllText(FilePath, json);
+            Debug.Log("[SaveSystem] Wrote file: " + FilePath + " (chars=" + json.Length + ")");
+            return true;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[SaveSystem] Save failed: " + e);
+            return false;
+        }
     }
 
     public static bool TryLoad(out SaveData data)
     {
         data = null;
-        if (File.Exists(FilePath)) return false;
-
         try
         {
+            if (!File.Exists(FilePath))
+            {
+                Debug.Log("[SaveSystem] No file at: " + FilePath);
+                return false;
+            }
+
             string json = File.ReadAllText(FilePath);
             data = JsonUtility.FromJson<SaveData>(json);
-            return data != null;
-        }
+            if (data == null)
+            {
+                Debug.LogWarning("[SaveSystem] JSON parsed null at: " + FilePath);
+                return false;
+            }
 
-        catch
+            Debug.Log("[SaveSystem] Loaded file: " + FilePath + " (chars=" + json.Length + ")");
+            return true;
+        }
+        catch (Exception e)
         {
+            Debug.LogError("[SaveSystem] Load failed: " + e);
             data = null;
             return false;
         }
@@ -51,6 +69,17 @@ public static class SaveSystem
 
     public static void Delete()
     {
-        if (File.Exists(FilePath)) File.Delete(FilePath);
+        try
+        {
+            if (File.Exists(FilePath))
+            {
+                File.Delete(FilePath);
+                Debug.Log("[SaveSystem] Deleted file: " + FilePath);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[SaveSystem] Delete failed: " + e);
+        }
     }
 }
