@@ -259,9 +259,23 @@ public class GameController : MonoBehaviour
 
     void ClearBoard()
     {
-        foreach (CardView card in cards)
+        for (int i = cards.Count - 1; i >= 0; i--)
         {
-            if (cardPrefab != null) Destroy(cardPrefab.gameObject);
+            if (cards[i] != null)
+            {
+                Destroy(cards[i].gameObject);
+            }
+        }
+
+        //Extra check
+
+        if (responsiveGrid != null)
+        {
+            Transform container = responsiveGrid.transform;
+            for(int i = container.childCount -1; i >= 0; i --)
+            {
+                Destroy(container.GetChild(i).gameObject);
+            }
         }
 
         cards.Clear();

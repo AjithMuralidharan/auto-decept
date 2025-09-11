@@ -3,7 +3,20 @@ guid: 00f2e2433db4cc445ac9e3633328f775
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - boardConfig: {instanceID: 0}
+  - cardPrefab: {instanceID: 0}
+  - responsiveGrid: {instanceID: 0}
+  - scoreText: {instanceID: 0}
+  - comboText: {instanceID: 0}
+  - newGameButton: {instanceID: 0}
+  - layoutButton: {instanceID: 0}
+  - audioSource: {instanceID: 0}
+  - audioClip: {instanceID: 0}
+  - matchClip: {instanceID: 0}
+  - flipClip: {instanceID: 0}
+  - mismatchClip: {instanceID: 0}
+  - gameOverClip: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

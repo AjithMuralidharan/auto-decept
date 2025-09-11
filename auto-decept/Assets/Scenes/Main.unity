@@ -123,6 +123,63 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &110557104
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 110557106}
+  - component: {fileID: 110557105}
+  m_Layer: 0
+  m_Name: GameController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &110557105
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 110557104}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00f2e2433db4cc445ac9e3633328f775, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  boardConfig: {fileID: 11400000, guid: aac0ef2e3bf993c4c8364246ccdfd1f6, type: 2}
+  cardPrefab: {fileID: 6201525269167771510, guid: 843f5701b425fde41bc74502999933ac, type: 3}
+  responsiveGrid: {fileID: 640980981}
+  scoreText: {fileID: 559203558}
+  comboText: {fileID: 708646436}
+  newGameButton: {fileID: 1464567078}
+  layoutButton: {fileID: 1926165037}
+  audioSource: {fileID: 0}
+  audioClip: {fileID: 0}
+  matchClip: {fileID: 0}
+  flipClip: {fileID: 0}
+  mismatchClip: {fileID: 0}
+  gameOverClip: {fileID: 0}
+--- !u!4 &110557106
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 110557104}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 4
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &387273494
 GameObject:
   m_ObjectHideFlags: 0
@@ -405,6 +462,7 @@ GameObject:
   - component: {fileID: 640980980}
   - component: {fileID: 640980979}
   - component: {fileID: 640980978}
+  - component: {fileID: 640980981}
   m_Layer: 5
   m_Name: GridPanel
   m_TagString: Untagged
@@ -445,15 +503,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 0
-    m_Right: 0
-    m_Top: 0
-    m_Bottom: 0
+    m_Left: 8
+    m_Right: 8
+    m_Top: 8
+    m_Bottom: 8
   m_ChildAlignment: 0
   m_StartCorner: 0
   m_StartAxis: 0
-  m_CellSize: {x: 100, y: 100}
-  m_Spacing: {x: 0, y: 0}
+  m_CellSize: {x: 182, y: 182}
+  m_Spacing: {x: 8, y: 8}
   m_Constraint: 0
   m_ConstraintCount: 2
 --- !u!114 &640980979
@@ -494,6 +552,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 640980976}
   m_CullTransparentMesh: 1
+--- !u!114 &640980981
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 640980976}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 87c62e4beb815e242b5e5c4cbc571350, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetArea: {fileID: 640980977}
+  rows: 2
+  cols: 2
+  spacing: {x: 8, y: 8}
+  padding: {x: 8, y: 8}
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
